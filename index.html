@@ -5,20 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mölkky Pisteiden Laskuri</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-    h1 { text-align: center; }
-    #playerCountContainer { text-align: center; margin-bottom: 20px; }
-    table { border-collapse: collapse; margin: auto; width: 100%; background: white; }
-    th, td { border: 1px solid #ccc; text-align: center; padding: 8px; }
-    tfoot td { font-weight: bold; background: #eee; }
+    body { font-family: Arial, sans-serif; margin: 10px; background: #f9f9f9; }
+    h1 { text-align: center; font-size: 1.6em; }
+    #playerCountContainer { text-align: center; margin-bottom: 15px; }
+    table {
+      border-collapse: collapse; margin: auto; width: 100%;
+      background: white; font-size: 0.95em;
+    }
+    th, td {
+      border: 1px solid #ccc; text-align: center;
+      padding: 6px;
+    }
+    tfoot td {
+      font-weight: bold; background: #eee;
+    }
     input[type="number"], input[type="text"] {
-      width: 60px; padding: 4px; text-align: center;
+      width: 50px; padding: 4px; text-align: center;
+      font-size: 1em;
     }
     button {
-      margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;
+      margin: 5px; padding: 8px 16px; font-size: 1em;
+      cursor: pointer;
     }
     .winner { background-color: #c7f9cc !important; }
     .overlimit { background-color: #ffcccc !important; }
+
+    @media (max-width: 600px) {
+      input[type="number"], input[type="text"] {
+        width: 100%; box-sizing: border-box;
+      }
+      th, td {
+        padding: 4px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -42,13 +61,8 @@
 
     function restartGame() {
       const newCount = parseInt(document.getElementById("playerCount").value);
-      if (newCount !== currentPlayers) {
-        currentPlayers = newCount;
-        playerNames = [];
-        for (let i = 0; i < currentPlayers; i++) {
-          playerNames.push(`Pelaaja ${i + 1}`);
-        }
-      }
+      currentPlayers = newCount;
+      playerNames = [...Array(currentPlayers)].map((_, i) => `Pelaaja ${i + 1}`);
       initializeTable();
     }
 
@@ -60,20 +74,17 @@
         </div>
         <table id="scoreTable">
           <thead>
-            <tr><th>Kierros</th>${[...Array(currentPlayers)].map((_, i) =>
-              `<th><input type="text" id="name${i}" value="${playerNames[i] || `Pelaaja ${i+1}`}" onchange="updateNames()" /></th>`).join("")}
+            <tr><th>Kierros</th>${playerNames.map((name, i) =>
+              `<th><input type="text" id="name${i}" value="${name}" onchange="updateNames()" /></th>`).join("")}
             </tr>
           </thead>
           <tbody id="scoreBody"></tbody>
           <tfoot>
-            <tr><td>Yhteensä</td>${[...Array(currentPlayers)].map((_, i) =>
+            <tr><td>Yhteensä</td>${playerNames.map((_, i) =>
               `<td id="sum${i}">0</td>`).join("")}
             </tr>
           </tfoot>
-        </table>
-        <div style="text-align:center;">
-          <button onclick="resetScores()">Nollaa pisteet</button>
-        </div>`;
+        </table>`;
       addRound();
     }
 
@@ -88,7 +99,7 @@
       const table = document.getElementById("scoreBody");
       const roundNumber = table.children.length + 1;
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${roundNumber}</td>` + [...Array(currentPlayers)].map(() =>
+      tr.innerHTML = `<td>${roundNumber}</td>` + playerNames.map(() =>
         `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`).join("");
       table.appendChild(tr);
       document.getElementById("roundCounter").textContent = roundNumber;
@@ -105,7 +116,6 @@
 
       for (let p = 0; p < currentPlayers; p++) {
         let total = 0;
-
         for (let r = 0; r < rows.length; r++) {
           const input = rows[r].querySelectorAll("input")[p];
           let val = parseInt(input.value);
@@ -123,7 +133,6 @@
             }
           }
         }
-
         totals[p] = total;
         const cell = document.getElementById("sum" + p);
         cell.textContent = total;
@@ -134,21 +143,11 @@
         }
       }
 
-      const lastRowInputs = rows[rows.length - 1]?.querySelectorAll("input") || [];
-      const allFilled = [...lastRowInputs].every(input => input.value !== "");
+      const lastInputs = rows[rows.length - 1]?.querySelectorAll("input") || [];
+      const allFilled = [...lastInputs].every(input => input.value !== "");
       if (!someoneWon && allFilled) {
         addRound();
       }
-    }
-
-    function resetScores() {
-      const confirmReset = confirm("Haluatko varmasti nollata kaikki pisteet?");
-      if (!confirmReset) return;
-      const rows = document.querySelectorAll("#scoreBody tr");
-      rows.forEach(row => {
-        row.querySelectorAll("input").forEach(input => input.value = "");
-      });
-      updateSums();
     }
 
     window.onload = () => {
