@@ -50,19 +50,10 @@
     .overlimit {
       background-color: #ffcccc !important;
     }
-    @media (max-width: 600px) {
-      input[type="number"], input[type="text"] {
-        width: 100%;
-        font-size: 14px;
-      }
-      button {
-        width: 100%;
-      }
-    }
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri v2</h1>
+  <h1>Mölkky Pisteiden Laskuri</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -82,143 +73,91 @@
   <div id="game"></div>
   <script>
     let currentPlayers = 2;
-    let maxRounds = 20;
-    // Nyt tallenna pelaajakohtaisesti listan ylityskierroksista, joilla on jo pudotus tehty
-    let playerOverLimit = {};
 
     function initializeTable() {
       currentPlayers = parseInt(document.getElementById("playerCount").value);
-      playerOverLimit = {};
-      for(let i=0; i<currentPlayers; i++) {
-        playerOverLimit[i] = [];
-      }
       localStorage.removeItem("molkkylaskuri");
-
       const container = document.getElementById("game");
-      let html = '<div style="text-align:center;"><strong>Kierroksia pelattu: <span id="roundCounter">0</span></strong></div>';
-      html += '<table id="scoreTable"><thead><tr><th>Kierros</th>';
+      let html = `
+        <div style="text-align:center;"><strong>Kierros: <span id="roundCounter">1</span></strong></div>
+        <table id="scoreTable"><thead><tr><th>Kierros</th>`;
+
       for (let i = 1; i <= currentPlayers; i++) {
         html += `<th><input type="text" value="Pelaaja ${i}" onchange="saveData()" /></th>`;
       }
-      html += '</tr></thead><tbody>';
-      for (let i = 1; i <= maxRounds; i++) {
-        html += `<tr><td>${i}</td>`;
-        for (let j = 0; j < currentPlayers; j++) {
-          html += `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`;
-        }
-        html += '</tr>';
-      }
-      html += '</tbody><tfoot><tr><td>Yhteensä</td>';
+
+      html += `</tr></thead><tbody id="scoreBody"></tbody><tfoot><tr><td>Yhteensä</td>`;
+
       for (let i = 0; i < currentPlayers; i++) {
         html += `<td id="sum${i}">0</td>`;
       }
-      html += '</tr></tfoot></table>';
-      html += '<div style="text-align:center;"><button onclick="resetScores()">Nollaa pisteet</button></div>';
+
+      html += `</tr></tfoot></table>
+               <div style="text-align:center;">
+                 <button onclick="resetScores()">Nollaa pisteet</button>
+               </div>`;
       container.innerHTML = html;
-      loadData();
+      addRound();
+    }
+
+    function addRound() {
+      const table = document.getElementById("scoreBody");
+      const roundNumber = table.children.length + 1;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${roundNumber}</td>` +
+        Array.from({ length: currentPlayers }).map(() =>
+          `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`).join('');
+      table.innerHTML = '';
+      table.appendChild(tr);
+      document.getElementById("roundCounter").textContent = roundNumber;
     }
 
     function updateSums() {
       const table = document.getElementById("scoreTable");
-      const players = currentPlayers;
-      const rows = table.querySelectorAll("tbody tr");
-      let totals = Array(players).fill(0);
-      let maxFilledRound = 0;
+      const rows = document.querySelectorAll("#scoreBody tr");
+      let totals = Array(currentPlayers).fill(0);
       let someoneWon = false;
 
-      // Poista punaiset korostukset
       rows.forEach(row => {
         row.querySelectorAll("td").forEach(cell => {
           cell.classList.remove("overlimit");
         });
       });
 
-      // Lue pistetaulukko per pelaaja per kierros
-      let playerRoundPoints = [];
-      for(let i=0; i<players; i++) {
-        playerRoundPoints[i] = [];
-      }
-      rows.forEach((row, rowIndex) => {
-        const inputs = row.querySelectorAll("input");
-        let filled = false;
-        inputs.forEach((input, i) => {
-          const val = parseInt(input.value);
+      for (let i = 0; i < currentPlayers; i++) {
+        let total = 0;
+        for (let r = 0; r < rows.length; r++) {
+          const input = rows[r].querySelectorAll("input")[i];
+          let val = parseInt(input.value);
           if (!isNaN(val)) {
-            playerRoundPoints[i][rowIndex] = val;
-            filled = true;
-          } else {
-            playerRoundPoints[i][rowIndex] = 0;
-          }
-        });
-        if (filled) maxFilledRound = rowIndex + 1;
-      });
-
-      for(let i=0; i<players; i++) {
-        totals[i] = playerRoundPoints[i].reduce((a,b) => a+b, 0);
-      }
-
-      // Tarkistetaan ylitykset ja korjataan pisteet tarvittaessa
-      for(let i=0; i<players; i++) {
-        const sumCell = document.getElementById("sum" + i);
-        sumCell.classList.remove("winner");
-
-        if(totals[i] === 50) {
-          someoneWon = true;
-          sumCell.classList.add("winner");
-          // Jos pelaaja voitti, voidaan tyhjentää ylityskierrokset
-          playerOverLimit[i] = [];
-        }
-        else if(totals[i] > 50) {
-          // Etsi ylityskierros: ensimmäinen kierros, jolla pistemäärä ylitti 50
-          let ylitysKierros = -1;
-          for(let r=0; r<rows.length; r++) {
-            const piste = playerRoundPoints[i][r];
-            if(piste > 0) {
-              const summaIlmanTuota = totals[i] - piste;
-              if(summaIlmanTuota < 50) {
-                ylitysKierros = r;
-                break;
+            total += val;
+            if (total > 50) {
+              alert(`Pelaaja ${i + 1} ylitti 50 pistettä kierroksella ${r + 1} – pistemäärä pudotetaan 25:een.`);
+              for (let rr = 0; rr <= r; rr++) {
+                const inp = rows[rr].querySelectorAll("input")[i];
+                inp.value = '';
               }
+              rows[r].querySelectorAll("input")[i].value = 25;
+              rows[r].querySelectorAll("td")[i + 1].classList.add("overlimit");
+              total = 25;
             }
           }
-          if(ylitysKierros === -1) ylitysKierros = maxFilledRound - 1;
-
-          // Tarkista onko pudotus jo tehty tällä kierroksella
-          if(!playerOverLimit[i].includes(ylitysKierros)) {
-            alert(`Pelaaja ${i+1} ylitti 50 pistettä – pistemäärä pudotetaan 25:een.`);
-
-            // Merkitse pudotus tehtyksi
-            playerOverLimit[i].push(ylitysKierros);
-
-            // Tyhjennä kaikki pisteet pelaajalta
-            for(let r=0; r<rows.length; r++) {
-              const input = rows[r].querySelectorAll("input")[i];
-              input.value = '';
-            }
-
-            // Aseta ylityskierroksen pisteeksi 25
-            rows[ylitysKierros].querySelectorAll("input")[i].value = 25;
-
-            // Merkitse solun tausta punaiseksi
-            rows[ylitysKierros].querySelectorAll("td")[i+1].classList.add("overlimit");
-
-            updateSums();
-            return;
-          } else {
-            // Pudotus on jo tehty, joten näytä pisteet 25
-            totals[i] = 25;
-          }
-        } else {
-          // Jos pistemäärä on alle tai tasan 50, voidaan poistaa ylityskierrokset, jos halutaan (tai jättää)
-          // Tässä ei poisteta, jotta useat pudotukset voidaan toteuttaa
         }
-
-        sumCell.textContent = totals[i];
+        totals[i] = total;
+        const cell = document.getElementById("sum" + i);
+        cell.textContent = total;
+        cell.classList.remove("winner");
+        if (total === 50) {
+          cell.classList.add("winner");
+          someoneWon = true;
+        }
       }
 
-      document.getElementById("roundCounter").textContent = maxFilledRound;
+      document.getElementById("roundCounter").textContent = rows.length;
 
-      if(!someoneWon && maxFilledRound === rows.length) {
+      const inputs = rows[rows.length - 1].querySelectorAll("input");
+      const allFilled = Array.from(inputs).every(input => input.value !== "");
+      if (!someoneWon && allFilled) {
         addRound();
       }
 
@@ -227,79 +166,12 @@
 
     function resetScores() {
       if (!confirm("Haluatko varmasti nollata kaikki pisteet?")) return;
-      const inputs = document.querySelectorAll("#scoreTable tbody input");
-      inputs.forEach(input => input.value = "");
-      playerOverLimit = {};
-      for(let i=0; i<currentPlayers; i++) {
-        playerOverLimit[i] = [];
-      }
-      updateSums();
       localStorage.removeItem("molkkylaskuri");
+      initializeTable();
     }
 
     function saveData() {
-      const data = {
-        playerCount: currentPlayers,
-        names: [],
-        scores: []
-      };
-      const headers = document.querySelectorAll("#scoreTable thead input");
-      headers.forEach(input => data.names.push(input.value));
-
-      const rows = document.querySelectorAll("#scoreTable tbody tr");
-      rows.forEach(row => {
-        const inputs = row.querySelectorAll("input");
-        const round = [];
-        inputs.forEach(input => round.push(input.value));
-        data.scores.push(round);
-      });
-
-      localStorage.setItem("molkkylaskuri", JSON.stringify(data));
-      history.replaceState(null, "", "?data=" + btoa(unescape(encodeURIComponent(JSON.stringify(data)))));
-    }
-
-    function loadData() {
-      let data;
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has("data")) {
-        try {
-          const decoded = decodeURIComponent(escape(atob(urlParams.get("data"))));
-          data = JSON.parse(decoded);
-        } catch (e) {
-          console.error("Virhe datan latauksessa linkistä.");
-        }
-      } else {
-        data = JSON.parse(localStorage.getItem("molkkylaskuri"));
-      }
-      if (!data) return;
-
-      currentPlayers = data.playerCount || 2;
-      const headers = document.querySelectorAll("#scoreTable thead input");
-      headers.forEach((input, i) => {
-        input.value = data.names[i] || `Pelaaja ${i + 1}`;
-      });
-
-      const rows = document.querySelectorAll("#scoreTable tbody tr");
-      rows.forEach((row, i) => {
-        const inputs = row.querySelectorAll("input");
-        if (!data.scores[i]) return;
-        inputs.forEach((input, j) => {
-          input.value = data.scores[i][j] || "";
-        });
-      });
-
-      updateSums();
-    }
-
-    function addRound() {
-      const table = document.querySelector("#scoreTable tbody");
-      const roundNumber = table.rows.length + 1;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${roundNumber}</td>` + 
-        Array.from({length: currentPlayers}).map(() => 
-          '<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>').join('');
-      table.appendChild(tr);
-      updateSums();
+      // Lisätään tulevaa käyttöä varten jos halutaan tallennus myöhemmin
     }
 
     window.onload = () => {
