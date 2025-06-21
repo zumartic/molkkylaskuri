@@ -62,7 +62,7 @@
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri</h1>
+  <h1>Mölkky Pisteiden Laskuri v2</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -83,12 +83,15 @@
   <script>
     let currentPlayers = 2;
     let maxRounds = 20;
-    // Map: pelaajaIndex -> onko jo pudotettu 25 pisteeseen
+    // Nyt tallenna pelaajakohtaisesti listan ylityskierroksista, joilla on jo pudotus tehty
     let playerOverLimit = {};
 
     function initializeTable() {
       currentPlayers = parseInt(document.getElementById("playerCount").value);
       playerOverLimit = {};
+      for(let i=0; i<currentPlayers; i++) {
+        playerOverLimit[i] = [];
+      }
       localStorage.removeItem("molkkylaskuri");
 
       const container = document.getElementById("game");
@@ -123,19 +126,18 @@
       let maxFilledRound = 0;
       let someoneWon = false;
 
-      // Poistetaan kaikki punaiset korostukset
+      // Poista punaiset korostukset
       rows.forEach(row => {
         row.querySelectorAll("td").forEach(cell => {
           cell.classList.remove("overlimit");
         });
       });
 
-      // Lasketaan kokonaispisteet ja tallennetaan per kierros per pelaaja pisteet
+      // Lue pistetaulukko per pelaaja per kierros
       let playerRoundPoints = [];
       for(let i=0; i<players; i++) {
         playerRoundPoints[i] = [];
       }
-
       rows.forEach((row, rowIndex) => {
         const inputs = row.querySelectorAll("input");
         let filled = false;
@@ -159,49 +161,56 @@
       for(let i=0; i<players; i++) {
         const sumCell = document.getElementById("sum" + i);
         sumCell.classList.remove("winner");
-        playerOverLimit[i] = playerOverLimit[i] || false;
 
         if(totals[i] === 50) {
           someoneWon = true;
           sumCell.classList.add("winner");
-          playerOverLimit[i] = false; // Reset ylitys tilasta voitossa
+          // Jos pelaaja voitti, voidaan tyhjentää ylityskierrokset
+          playerOverLimit[i] = [];
         }
         else if(totals[i] > 50) {
-          if(!playerOverLimit[i]) {
-            alert(`Pelaaja ${i+1} ylitti 50 pistettä – pistemäärä pudotetaan 25:een.`);
-            playerOverLimit[i] = true;
-
-            // Pudotetaan koko pistemäärä 25:een -> muutetaan viimeisimmän ylittävän kierroksen pisteeksi korjausarvo
-            // lasketaan kuinka paljon pitää vähentää ja muutetaan syötettä
-
-            // Etsi viimeisin ylittävä kierros
-            for(let r = rows.length-1; r>=0; r--) {
-              const val = playerRoundPoints[i][r];
-              if(val && val > 0) {
-                // Merkataan punaisella
-                rows[r].querySelectorAll("td")[i+1].classList.add("overlimit");
-                
-                // Korjataan piste kyseisellä kierroksella siten, että summa on 25
-                const nykyinenSummaEnnen = totals[i];
-                const korjaus = 25 - nykyinenSummaEnnen;
-                let uusiArvo = val + korjaus;
-                if(uusiArvo < 0) uusiArvo = 0;
-
-                // Päivitä syöte
-                const input = rows[r].querySelectorAll("input")[i];
-                input.value = uusiArvo;
-
-                // Päivitä taulukko ja summat uudelleen korjauksen jälkeen ja paluu
-                updateSums();
-                return;
+          // Etsi ylityskierros: ensimmäinen kierros, jolla pistemäärä ylitti 50
+          let ylitysKierros = -1;
+          for(let r=0; r<rows.length; r++) {
+            const piste = playerRoundPoints[i][r];
+            if(piste > 0) {
+              const summaIlmanTuota = totals[i] - piste;
+              if(summaIlmanTuota < 50) {
+                ylitysKierros = r;
+                break;
               }
             }
+          }
+          if(ylitysKierros === -1) ylitysKierros = maxFilledRound - 1;
+
+          // Tarkista onko pudotus jo tehty tällä kierroksella
+          if(!playerOverLimit[i].includes(ylitysKierros)) {
+            alert(`Pelaaja ${i+1} ylitti 50 pistettä – pistemäärä pudotetaan 25:een.`);
+
+            // Merkitse pudotus tehtyksi
+            playerOverLimit[i].push(ylitysKierros);
+
+            // Tyhjennä kaikki pisteet pelaajalta
+            for(let r=0; r<rows.length; r++) {
+              const input = rows[r].querySelectorAll("input")[i];
+              input.value = '';
+            }
+
+            // Aseta ylityskierroksen pisteeksi 25
+            rows[ylitysKierros].querySelectorAll("input")[i].value = 25;
+
+            // Merkitse solun tausta punaiseksi
+            rows[ylitysKierros].querySelectorAll("td")[i+1].classList.add("overlimit");
+
+            updateSums();
+            return;
           } else {
-            // Jo pudotettu, korjaa pistemäärä näyttämään 25
+            // Pudotus on jo tehty, joten näytä pisteet 25
             totals[i] = 25;
           }
         } else {
-          playerOverLimit[i] = false;
+          // Jos pistemäärä on alle tai tasan 50, voidaan poistaa ylityskierrokset, jos halutaan (tai jättää)
+          // Tässä ei poisteta, jotta useat pudotukset voidaan toteuttaa
         }
 
         sumCell.textContent = totals[i];
@@ -221,6 +230,9 @@
       const inputs = document.querySelectorAll("#scoreTable tbody input");
       inputs.forEach(input => input.value = "");
       playerOverLimit = {};
+      for(let i=0; i<currentPlayers; i++) {
+        playerOverLimit[i] = [];
+      }
       updateSums();
       localStorage.removeItem("molkkylaskuri");
     }
