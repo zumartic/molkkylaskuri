@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mölkky Pisteiden Laskuri</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    #playerCountContainer {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: auto;
+      width: 100%;
+      max-width: 100%;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      text-align: center;
+      padding: 8px;
+    }
+    tfoot td {
+      font-weight: bold;
+      background: #eee;
+    }
+    input[type="number"], input[type="text"] {
+      width: 60px;
+      padding: 4px;
+      text-align: center;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .winner {
+      background-color: #c7f9cc !important;
+    }
+    .current-turn {
+      border: 2px solid #007bff;
+    }
+    @media (max-width: 600px) {
+      input[type="number"], input[type="text"] {
+        width: 100%;
+        font-size: 14px;
+      }
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Mölkky Pisteiden Laskuri</h1>
+  <div id="playerCountContainer">
+    Pelaajien määrä:
+    <select id="playerCount">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+    </select>
+    <button onclick="initializeTable()">Aloita peli</button>
+  </div>
+  <div id="game"></div>
+  <script>
+    let currentPlayers = 2;
+    const maxRounds = 20;
+
+    function initializeTable() {
+      currentPlayers = parseInt(document.getElementById("playerCount").value);
+      const container = document.getElementById("game");
+      let html = '<div style="text-align:center;"><strong>Kierros: <span id="roundCounter">0</span> / ' + maxRounds + '</strong></div>';
+      html += '<table id="scoreTable"><thead><tr><th>Kierros</th>';
+      for (let i = 1; i <= currentPlayers; i++) {
+        html += `<th><input type="text" value="Pelaaja ${i}" onchange="saveData()" /></th>`;
+      }
+      html += '</tr></thead><tbody>';
+      for (let i = 1; i <= maxRounds; i++) {
+        html += `<tr><td>${i}</td>`;
+        for (let j = 0; j < currentPlayers; j++) {
+          html += `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody><tfoot><tr><td>Yhteensä</td>';
+      for (let i = 0; i < currentPlayers; i++) {
+        html += `<td id="sum${i}">0</td>`;
+      }
+      html += '</tr></tfoot></table>';
+      html += '<div style="text-align:center;"><button onclick="resetScores()">Nollaa pisteet</button></div>';
+      container.innerHTML = html;
+      loadData();
+    }
+
+    function updateSums() {
+      const table = document.getElementById("scoreTable");
+      const players = currentPlayers;
+      const rows = table.querySelectorAll("tbody tr");
+      const totals = Array(players).fill(0);
+      let maxFilledRound = 0;
+
+      rows.forEach((row, rowIndex) => {
+        const inputs = row.querySelectorAll("input");
+        let filled = false;
+        inputs.forEach((input, i) => {
+          const val = parseInt(input.value);
+          if (!isNaN(val)) {
+            totals[i] += val;
+            filled = true;
+          }
+        });
+        if (filled) maxFilledRound = rowIndex + 1;
+      });
+
+      document.getElementById("roundCounter").textContent = maxFilledRound;
+
+      totals.forEach((total, i) => {
+        if (total === 50) {
+          alert(`Pelaaja ${i + 1} saavutti 50 pistettä!`);
+          document.getElementById("sum" + i).classList.add("winner");
+        } else if (total > 50) {
+          alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
+          totals[i] = 25;
+        }
+        document.getElementById("sum" + i).textContent = totals[i];
+        document.getElementById("sum" + i).classList.remove("winner");
+        if (totals[i] === 50) {
+          document.getElementById("sum" + i).classList.add("winner");
+        }
+      });
+
+      saveData();
+    }
+
+    function resetScores() {
+      if (!confirm("Haluatko varmasti nollata kaikki pisteet?")) return;
+      const inputs = document.querySelectorAll("#scoreTable tbody input");
+      inputs.forEach(input => input.value = "");
+      updateSums();
+    }
+
+    function saveData() {
+      const data = {
+        playerCount: currentPlayers,
+        names: [],
+        scores: []
+      };
+      const headers = document.querySelectorAll("#scoreTable thead input");
+      headers.forEach(input => data.names.push(input.value));
+
+      const rows = document.querySelectorAll("#scoreTable tbody tr");
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll("input");
+        const round = [];
+        inputs.forEach(input => round.push(input.value));
+        data.scores.push(round);
+      });
+
+      localStorage.setItem("molkkylaskuri", JSON.stringify(data));
+      history.replaceState(null, "", "?data=" + btoa(unescape(encodeURIComponent(JSON.stringify(data)))));
+    }
+
+    function loadData() {
+      let data;
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("data")) {
+        try {
+          const decoded = decodeURIComponent(escape(atob(urlParams.get("data"))));
+          data = JSON.parse(decoded);
+        } catch (e) {
+          console.error("Virhe datan latauksessa linkistä.");
+        }
+      } else {
+        data = JSON.parse(localStorage.getItem("molkkylaskuri"));
+      }
+      if (!data) return;
+
+      currentPlayers = data.playerCount || 2;
+      const headers = document.querySelectorAll("#scoreTable thead input");
+      headers.forEach((input, i) => {
+        input.value = data.names[i] || `Pelaaja ${i + 1}`;
+      });
+
+      const rows = document.querySelectorAll("#scoreTable tbody tr");
+      rows.forEach((row, i) => {
+        const inputs = row.querySelectorAll("input");
+        if (!data.scores[i]) return;
+        inputs.forEach((input, j) => {
+          input.value = data.scores[i][j] || "";
+        });
+      });
+
+      updateSums();
+    }
+
+    window.onload = () => {
+      initializeTable();
+    };
+  </script>
+</body>
+</html>
