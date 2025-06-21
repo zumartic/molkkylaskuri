@@ -146,9 +146,12 @@
           alert(`Pelaaja ${i + 1} saavutti 50 pistettä!`);
           document.getElementById("sum" + i).classList.add("winner");
         } else if (total > 50) {
-          alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
+          if (parseInt(document.getElementById("sum" + i).textContent) !== 25) {
+            alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
+          }
           totals[i] = 25;
         }
+
         document.getElementById("sum" + i).textContent = totals[i];
         document.getElementById("sum" + i).classList.remove("winner");
         if (totals[i] === 50) {
