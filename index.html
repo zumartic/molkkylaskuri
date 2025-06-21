@@ -113,56 +113,65 @@
 
     
     function updateSums() {
-      let someoneWon = false;
-    
-      const table = document.getElementById("scoreTable");
-      const players = currentPlayers;
-      const rows = table.querySelectorAll("tbody tr");
-      const totals = Array(players).fill(0);
-      let maxFilledRound = 0;
+  const table = document.getElementById("scoreTable");
+  const players = currentPlayers;
+  const rows = table.querySelectorAll("tbody tr");
+  const totals = Array(players).fill(0);
+  let maxFilledRound = 0;
+  let someoneWon = false;
 
-      rows.forEach((row, rowIndex) => {
-        const inputs = row.querySelectorAll("input");
-        let filled = false;
-        inputs.forEach((input, i) => {
-          const val = parseInt(input.value);
-          if (!isNaN(val)) {
-            totals[i] += val;
-            filled = true;
-          }
-        });
-        if (filled) maxFilledRound = rowIndex + 1;
-      });
-
-      document.getElementById("roundCounter").textContent = maxFilledRound;
-
-      if (!someoneWon && maxFilledRound === document.querySelectorAll('#scoreTable tbody tr').length) {
-        addRound();
+  rows.forEach((row, rowIndex) => {
+    const inputs = row.querySelectorAll("input");
+    let filled = false;
+    inputs.forEach((input, i) => {
+      const val = parseInt(input.value);
+      if (!isNaN(val)) {
+        totals[i] += val;
+        filled = true;
       }
+    });
+    if (filled) maxFilledRound = rowIndex + 1;
+  });
 
-      totals.forEach((total, i) => {
-        if (total === 50) {
-          someoneWon = true;
-          alert(`Pelaaja ${i + 1} saavutti 50 pistettä!`);
-          document.getElementById("sum" + i).classList.add("winner");
-        } else if (total > 50) {
-            if (parseInt(document.getElementById("sum" + i).textContent) !== 25) {
-              alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
-              
-              // Nollataan viimeisin syöte, joka johti ylitykseen
-              for (let r = rows.length - 1; r >= 0; r--) {
-                const cell = rows[r].querySelectorAll("input")[i];
-                const val = parseInt(cell.value);
-                if (!isNaN(val)) {
-                  cell.value = '';
-                  break;
-                }
-              }
+  for (let i = 0; i < players; i++) {
+    if (totals[i] === 50) {
+      someoneWon = true;
+      document.getElementById("sum" + i).classList.add("winner");
+    } else if (totals[i] > 50) {
+      const currentDisplayed = parseInt(document.getElementById("sum" + i).textContent);
+      if (currentDisplayed !== 25) {
+        alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
+        // Nollataan viimeisin syöte
+        for (let r = rows.length - 1; r >= 0; r--) {
+          const cell = rows[r].querySelectorAll("input")[i];
+          const val = parseInt(cell.value);
+          if (!isNaN(val)) {
+            cell.value = '';
+            break;
+          }
+        }
+        updateSums();
+        return;
+      }
+      totals[i] = 25;
+    }
 
-    updateSums(); // Kutsutaan uudelleen päivittämään oikea summa
-    return;
+    document.getElementById("sum" + i).textContent = totals[i];
+    document.getElementById("sum" + i).classList.remove("winner");
+    if (totals[i] === 50) {
+      document.getElementById("sum" + i).classList.add("winner");
+    }
   }
+
+  document.getElementById("roundCounter").textContent = maxFilledRound;
+
+  if (!someoneWon && maxFilledRound === rows.length) {
+    addRound();
+  }
+
+  saveData();
 }
+
 
 
         document.getElementById("sum" + i).textContent = totals[i];
