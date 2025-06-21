@@ -62,7 +62,7 @@
     function restartGame() {
       const newCount = parseInt(document.getElementById("playerCount").value);
       currentPlayers = newCount;
-      playerNames = [...Array(currentPlayers)].map((_, i) => `Pelaaja ${i + 1}`);
+      playerNames = [...Array(currentPlayers)].map((_, i) => `Pelaaja_${i + 1}`);
       initializeTable();
     }
 
