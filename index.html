@@ -146,11 +146,24 @@
           alert(`Pelaaja ${i + 1} saavutti 50 pistettä!`);
           document.getElementById("sum" + i).classList.add("winner");
         } else if (total > 50) {
-          if (parseInt(document.getElementById("sum" + i).textContent) !== 25) {
-            alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
-          }
-          totals[i] = 25;
-        }
+            if (parseInt(document.getElementById("sum" + i).textContent) !== 25) {
+              alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
+              
+              // Nollataan viimeisin syöte, joka johti ylitykseen
+              for (let r = rows.length - 1; r >= 0; r--) {
+                const cell = rows[r].querySelectorAll("input")[i];
+                const val = parseInt(cell.value);
+                if (!isNaN(val)) {
+                  cell.value = '';
+                  break;
+                }
+              }
+
+    updateSums(); // Kutsutaan uudelleen päivittämään oikea summa
+    return;
+  }
+}
+
 
         document.getElementById("sum" + i).textContent = totals[i];
         document.getElementById("sum" + i).classList.remove("winner");
