@@ -22,7 +22,7 @@
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri v2</h1>
+  <h1>Mölkky Pisteiden Laskuri</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -33,22 +33,35 @@
       <option value="5">5</option>
       <option value="6">6</option>
     </select>
-    <button onclick="initializeTable()">Aloita peli</button>
+    <button onclick="restartGame()">Aloita peli</button>
   </div>
   <div id="game"></div>
   <script>
     let currentPlayers = 2;
+    let playerNames = [];
+
+    function restartGame() {
+      const newCount = parseInt(document.getElementById("playerCount").value);
+      if (newCount !== currentPlayers) {
+        currentPlayers = newCount;
+        playerNames = [];
+        for (let i = 0; i < currentPlayers; i++) {
+          playerNames.push(`Pelaaja ${i + 1}`);
+        }
+      }
+      initializeTable();
+    }
 
     function initializeTable() {
-      currentPlayers = parseInt(document.getElementById("playerCount").value);
-      document.getElementById("game").innerHTML = `
+      const container = document.getElementById("game");
+      container.innerHTML = `
         <div style="text-align:center;">
           <strong>Pelatut kierrokset: <span id="roundCounter">0</span></strong>
         </div>
         <table id="scoreTable">
           <thead>
             <tr><th>Kierros</th>${[...Array(currentPlayers)].map((_, i) =>
-              `<th><input type="text" value="Pelaaja ${i+1}" onchange="saveData()" /></th>`).join("")}
+              `<th><input type="text" id="name${i}" value="${playerNames[i] || `Pelaaja ${i+1}`}" onchange="updateNames()" /></th>`).join("")}
             </tr>
           </thead>
           <tbody id="scoreBody"></tbody>
@@ -62,6 +75,13 @@
           <button onclick="resetScores()">Nollaa pisteet</button>
         </div>`;
       addRound();
+    }
+
+    function updateNames() {
+      for (let i = 0; i < currentPlayers; i++) {
+        const input = document.getElementById("name" + i);
+        playerNames[i] = input.value;
+      }
     }
 
     function addRound() {
@@ -122,18 +142,18 @@
     }
 
     function resetScores() {
-      if (confirm("Haluatko varmasti nollata kaikki pisteet?")) {
-        initializeTable();
-      }
-    }
-
-    function saveData() {
-      // valinnainen tallennus myöhempää kehitystä varten
+      const confirmReset = confirm("Haluatko varmasti nollata kaikki pisteet?");
+      if (!confirmReset) return;
+      const rows = document.querySelectorAll("#scoreBody tr");
+      rows.forEach(row => {
+        row.querySelectorAll("input").forEach(input => input.value = "");
+      });
+      updateSums();
     }
 
     window.onload = () => {
-      initializeTable();
-      document.getElementById("playerCount").addEventListener("change", initializeTable);
+      restartGame();
+      document.getElementById("playerCount").addEventListener("change", restartGame);
     };
   </script>
 </body>
