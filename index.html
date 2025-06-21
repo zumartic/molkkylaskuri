@@ -5,55 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mölkky Pisteiden Laskuri</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f9f9f9;
-    }
-    h1 {
-      text-align: center;
-    }
-    #playerCountContainer {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    table {
-      border-collapse: collapse;
-      margin: auto;
-      width: 100%;
-      max-width: 100%;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      text-align: center;
-      padding: 8px;
-    }
-    tfoot td {
-      font-weight: bold;
-      background: #eee;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+    h1 { text-align: center; }
+    #playerCountContainer { text-align: center; margin-bottom: 20px; }
+    table { border-collapse: collapse; margin: auto; width: 100%; background: white; }
+    th, td { border: 1px solid #ccc; text-align: center; padding: 8px; }
+    tfoot td { font-weight: bold; background: #eee; }
     input[type="number"], input[type="text"] {
-      width: 60px;
-      padding: 4px;
-      text-align: center;
+      width: 60px; padding: 4px; text-align: center;
     }
     button {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
+      margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;
     }
-    .winner {
-      background-color: #c7f9cc !important;
-    }
-    .overlimit {
-      background-color: #ffcccc !important;
-    }
+    .winner { background-color: #c7f9cc !important; }
+    .overlimit { background-color: #ffcccc !important; }
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri</h1>
+  <h1>Mölkky Pisteiden Laskuri v2</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -63,10 +32,6 @@
       <option value="4">4</option>
       <option value="5">5</option>
       <option value="6">6</option>
-      <option value="7">7</option>
-      <option value="8">8</option>
-      <option value="9">9</option>
-      <option value="10">10</option>
     </select>
     <button onclick="initializeTable()">Aloita peli</button>
   </div>
@@ -76,27 +41,26 @@
 
     function initializeTable() {
       currentPlayers = parseInt(document.getElementById("playerCount").value);
-      localStorage.removeItem("molkkylaskuri");
-      const container = document.getElementById("game");
-      let html = `
-        <div style="text-align:center;"><strong>Kierros: <span id="roundCounter">1</span></strong></div>
-        <table id="scoreTable"><thead><tr><th>Kierros</th>`;
-
-      for (let i = 1; i <= currentPlayers; i++) {
-        html += `<th><input type="text" value="Pelaaja ${i}" onchange="saveData()" /></th>`;
-      }
-
-      html += `</tr></thead><tbody id="scoreBody"></tbody><tfoot><tr><td>Yhteensä</td>`;
-
-      for (let i = 0; i < currentPlayers; i++) {
-        html += `<td id="sum${i}">0</td>`;
-      }
-
-      html += `</tr></tfoot></table>
-               <div style="text-align:center;">
-                 <button onclick="resetScores()">Nollaa pisteet</button>
-               </div>`;
-      container.innerHTML = html;
+      document.getElementById("game").innerHTML = `
+        <div style="text-align:center;">
+          <strong>Pelatut kierrokset: <span id="roundCounter">0</span></strong>
+        </div>
+        <table id="scoreTable">
+          <thead>
+            <tr><th>Kierros</th>${[...Array(currentPlayers)].map((_, i) =>
+              `<th><input type="text" value="Pelaaja ${i+1}" onchange="saveData()" /></th>`).join("")}
+            </tr>
+          </thead>
+          <tbody id="scoreBody"></tbody>
+          <tfoot>
+            <tr><td>Yhteensä</td>${[...Array(currentPlayers)].map((_, i) =>
+              `<td id="sum${i}">0</td>`).join("")}
+            </tr>
+          </tfoot>
+        </table>
+        <div style="text-align:center;">
+          <button onclick="resetScores()">Nollaa pisteet</button>
+        </div>`;
       addRound();
     }
 
@@ -104,47 +68,44 @@
       const table = document.getElementById("scoreBody");
       const roundNumber = table.children.length + 1;
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${roundNumber}</td>` +
-        Array.from({ length: currentPlayers }).map(() =>
-          `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`).join('');
-      table.innerHTML = '';
+      tr.innerHTML = `<td>${roundNumber}</td>` + [...Array(currentPlayers)].map(() =>
+        `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`).join("");
       table.appendChild(tr);
       document.getElementById("roundCounter").textContent = roundNumber;
     }
 
     function updateSums() {
-      const table = document.getElementById("scoreTable");
       const rows = document.querySelectorAll("#scoreBody tr");
       let totals = Array(currentPlayers).fill(0);
       let someoneWon = false;
 
       rows.forEach(row => {
-        row.querySelectorAll("td").forEach(cell => {
-          cell.classList.remove("overlimit");
-        });
+        row.querySelectorAll("td").forEach(td => td.classList.remove("overlimit"));
       });
 
-      for (let i = 0; i < currentPlayers; i++) {
+      for (let p = 0; p < currentPlayers; p++) {
         let total = 0;
+
         for (let r = 0; r < rows.length; r++) {
-          const input = rows[r].querySelectorAll("input")[i];
+          const input = rows[r].querySelectorAll("input")[p];
           let val = parseInt(input.value);
           if (!isNaN(val)) {
             total += val;
             if (total > 50) {
-              alert(`Pelaaja ${i + 1} ylitti 50 pistettä kierroksella ${r + 1} – pistemäärä pudotetaan 25:een.`);
-              for (let rr = 0; rr <= r; rr++) {
-                const inp = rows[rr].querySelectorAll("input")[i];
-                inp.value = '';
+              alert(`Pelaaja ${p + 1} ylitti 50 pistettä kierroksella ${r + 1}. Pistemäärä pudotetaan 25:een.`);
+              for (let i = 0; i <= r; i++) {
+                rows[i].querySelectorAll("input")[p].value = '';
               }
-              rows[r].querySelectorAll("input")[i].value = 25;
-              rows[r].querySelectorAll("td")[i + 1].classList.add("overlimit");
+              rows[r].querySelectorAll("input")[p].value = 25;
+              rows[r].querySelectorAll("td")[p + 1].classList.add("overlimit");
               total = 25;
+              break;
             }
           }
         }
-        totals[i] = total;
-        const cell = document.getElementById("sum" + i);
+
+        totals[p] = total;
+        const cell = document.getElementById("sum" + p);
         cell.textContent = total;
         cell.classList.remove("winner");
         if (total === 50) {
@@ -153,32 +114,26 @@
         }
       }
 
-      document.getElementById("roundCounter").textContent = rows.length;
-
-      const inputs = rows[rows.length - 1].querySelectorAll("input");
-      const allFilled = Array.from(inputs).every(input => input.value !== "");
+      const lastRowInputs = rows[rows.length - 1]?.querySelectorAll("input") || [];
+      const allFilled = [...lastRowInputs].every(input => input.value !== "");
       if (!someoneWon && allFilled) {
         addRound();
       }
-
-      saveData();
     }
 
     function resetScores() {
-      if (!confirm("Haluatko varmasti nollata kaikki pisteet?")) return;
-      localStorage.removeItem("molkkylaskuri");
-      initializeTable();
+      if (confirm("Haluatko varmasti nollata kaikki pisteet?")) {
+        initializeTable();
+      }
     }
 
     function saveData() {
-      // Lisätään tulevaa käyttöä varten jos halutaan tallennus myöhemmin
+      // valinnainen tallennus myöhempää kehitystä varten
     }
 
     window.onload = () => {
       initializeTable();
-      document.getElementById('playerCount').addEventListener('change', () => {
-        initializeTable();
-      });
+      document.getElementById("playerCount").addEventListener("change", initializeTable);
     };
   </script>
 </body>
