@@ -63,7 +63,7 @@
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri v3</h1>
+  <h1>Mölkky Pisteiden Laskuri v4</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -172,17 +172,6 @@
   saveData();
 }
 
-
-
-        document.getElementById("sum" + i).textContent = totals[i];
-        document.getElementById("sum" + i).classList.remove("winner");
-        if (totals[i] === 50) {
-          document.getElementById("sum" + i).classList.add("winner");
-        }
-      });
-
-      saveData();
-    }
 
     function resetScores() {
       if (!confirm("Haluatko varmasti nollata kaikki pisteet?")) return;
