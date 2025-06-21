@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fi">
 <head>
@@ -48,8 +47,8 @@
     .winner {
       background-color: #c7f9cc !important;
     }
-    .current-turn {
-      border: 2px solid #007bff;
+    .overlimit {
+      background-color: #ffcccc !important;
     }
     @media (max-width: 600px) {
       input[type="number"], input[type="text"] {
@@ -63,7 +62,7 @@
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri v4</h1>
+  <h1>Mölkky Pisteiden Laskuri</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -84,11 +83,12 @@
   <script>
     let currentPlayers = 2;
     let maxRounds = 20;
+    const overLimitMap = {};
 
     function initializeTable() {
       currentPlayers = parseInt(document.getElementById("playerCount").value);
       const container = document.getElementById("game");
-      let html = '<div style="text-align:center;"><strong>Kierroksia pelattu: <span id="roundCounter">0</span></strong> </div>';
+      let html = '<div style="text-align:center;"><strong>Kierroksia pelattu: <span id="roundCounter">0</span></strong></div>';
       html += '<table id="scoreTable"><thead><tr><th>Kierros</th>';
       for (let i = 1; i <= currentPlayers; i++) {
         html += `<th><input type="text" value="Pelaaja ${i}" onchange="saveData()" /></th>`;
@@ -111,72 +111,84 @@
       loadData();
     }
 
-    
     function updateSums() {
-  const table = document.getElementById("scoreTable");
-  const players = currentPlayers;
-  const rows = table.querySelectorAll("tbody tr");
-  const totals = Array(players).fill(0);
-  let maxFilledRound = 0;
-  let someoneWon = false;
+      const table = document.getElementById("scoreTable");
+      const players = currentPlayers;
+      const rows = table.querySelectorAll("tbody tr");
+      const totals = Array(players).fill(0);
+      let maxFilledRound = 0;
+      let someoneWon = false;
 
-  rows.forEach((row, rowIndex) => {
-    const inputs = row.querySelectorAll("input");
-    let filled = false;
-    inputs.forEach((input, i) => {
-      const val = parseInt(input.value);
-      if (!isNaN(val)) {
-        totals[i] += val;
-        filled = true;
-      }
-    });
-    if (filled) maxFilledRound = rowIndex + 1;
-  });
+      // Poista vanhat ylitysmerkit
+      rows.forEach(row => {
+        row.querySelectorAll("td").forEach(cell => {
+          cell.classList.remove("overlimit");
+        });
+      });
 
-  for (let i = 0; i < players; i++) {
-    if (totals[i] === 50) {
-      someoneWon = true;
-      document.getElementById("sum" + i).classList.add("winner");
-    } else if (totals[i] > 50) {
-      const currentDisplayed = parseInt(document.getElementById("sum" + i).textContent);
-      if (currentDisplayed !== 25) {
-        alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
-        // Nollataan viimeisin syöte
-        for (let r = rows.length - 1; r >= 0; r--) {
-          const cell = rows[r].querySelectorAll("input")[i];
-          const val = parseInt(cell.value);
+      rows.forEach((row, rowIndex) => {
+        const inputs = row.querySelectorAll("input");
+        let filled = false;
+        inputs.forEach((input, i) => {
+          const val = parseInt(input.value);
           if (!isNaN(val)) {
-            cell.value = '';
-            break;
+            totals[i] += val;
+            filled = true;
           }
+        });
+        if (filled) maxFilledRound = rowIndex + 1;
+      });
+
+      for (let i = 0; i < players; i++) {
+        const sumCell = document.getElementById("sum" + i);
+        sumCell.classList.remove("winner");
+
+        if (totals[i] === 50) {
+          someoneWon = true;
+          sumCell.classList.add("winner");
+          overLimitMap[i] = false; // reset ylitys-tila voitossa
+        } else if (totals[i] > 50) {
+          if (!overLimitMap[i]) {
+            alert(`Pelaaja ${i + 1} ylitti 50 pistettä – pistemäärä pudotettiin 25:een.`);
+            overLimitMap[i] = true;
+
+            // Korostetaan viimeisin syöte punaisella
+            for (let r = rows.length - 1; r >= 0; r--) {
+              const cell = rows[r].querySelectorAll("td")[i + 1];
+              const input = cell.querySelector("input");
+              const val = parseInt(input.value);
+              if (!isNaN(val)) {
+                input.value = '';
+                cell.classList.add("overlimit");
+                break;
+              }
+            }
+
+            totals[i] = 25;
+          } else {
+            totals[i] = 25;
+          }
+        } else {
+          overLimitMap[i] = false;
         }
-        updateSums();
-        return;
+
+        sumCell.textContent = totals[i];
       }
-      totals[i] = 25;
+
+      document.getElementById("roundCounter").textContent = maxFilledRound;
+
+      if (!someoneWon && maxFilledRound === rows.length) {
+        addRound();
+      }
+
+      saveData();
     }
-
-    document.getElementById("sum" + i).textContent = totals[i];
-    document.getElementById("sum" + i).classList.remove("winner");
-    if (totals[i] === 50) {
-      document.getElementById("sum" + i).classList.add("winner");
-    }
-  }
-
-  document.getElementById("roundCounter").textContent = maxFilledRound;
-
-  if (!someoneWon && maxFilledRound === rows.length) {
-    addRound();
-  }
-
-  saveData();
-}
-
 
     function resetScores() {
       if (!confirm("Haluatko varmasti nollata kaikki pisteet?")) return;
       const inputs = document.querySelectorAll("#scoreTable tbody input");
       inputs.forEach(input => input.value = "");
+      Object.keys(overLimitMap).forEach(k => overLimitMap[k] = false);
       updateSums();
     }
 
@@ -234,13 +246,6 @@
       updateSums();
     }
 
-    window.onload = () => {
-      initializeTable();
-      document.getElementById('playerCount').addEventListener('change', () => {
-        initializeTable();
-      });
-    };
-  
     function addRound() {
       const table = document.querySelector("#scoreTable tbody");
       const roundNumber = table.rows.length + 1;
@@ -251,7 +256,13 @@
       table.appendChild(tr);
       updateSums();
     }
-    </script>
-    
+
+    window.onload = () => {
+      initializeTable();
+      document.getElementById('playerCount').addEventListener('change', () => {
+        initializeTable();
+      });
+    };
+  </script>
 </body>
 </html>
