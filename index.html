@@ -8,20 +8,11 @@
     body { font-family: Arial, sans-serif; margin: 10px; background: #f9f9f9; }
     h1 { text-align: center; font-size: 1.6em; }
     #playerCountContainer { text-align: center; margin-bottom: 15px; }
-    table {
-      border-collapse: collapse; margin: auto; width: 100%;
-      background: white; font-size: 0.95em;
-    }
-    th, td {
-      border: 1px solid #ccc; text-align: center;
-      padding: 6px;
-    }
-    tfoot td {
-      font-weight: bold; background: #eee;
-    }
+    table { border-collapse: collapse; margin: auto; width: 100%; background: white; font-size: 0.95em; }
+    th, td { border: 1px solid #ccc; text-align: center; padding: 6px; }
+    tfoot td { font-weight: bold; background: #eee; }
     input[type="number"], input[type="text"] {
-      width: 50px; padding: 4px; text-align: center;
-      font-size: 1em;
+      width: 60px; padding: 4px; text-align: center; font-size: 1em;
     }
     button {
       margin: 5px; padding: 8px 16px; font-size: 1em;
@@ -29,15 +20,31 @@
     }
     .winner { background-color: #c7f9cc !important; }
     .overlimit { background-color: #ffcccc !important; }
-
+    .banner {
+      background-color: #4CAF50; color: white;
+      padding: 10px; text-align: center;
+      margin: 10px auto; max-width: 400px;
+      font-size: 1.2em; border-radius: 5px;
+      animation: fadein 1s ease-in;
+    }
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    canvas#confettiCanvas {
+      position: fixed; pointer-events: none;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 9999;
+    }
     @media (max-width: 600px) {
       input[type="number"], input[type="text"] {
         width: 100%; box-sizing: border-box;
       }
-      th, td {
-        padding: 4px;
-      }
+      th, td { padding: 4px; }
     }
+	input.overlimit {
+		background-color: #ffcccc !important;
+	}
   </style>
 </head>
 <body>
@@ -46,114 +53,249 @@
     Pelaajien määrä:
     <select id="playerCount">
       <option value="1">1</option>
-      <option value="2" selected>2</option>
+      <option value="2">2</option>
       <option value="3">3</option>
       <option value="4">4</option>
       <option value="5">5</option>
       <option value="6">6</option>
     </select>
-    <button onclick="restartGame()">Aloita peli</button>
+    <button onclick="startGame()">Aloita peli</button>
   </div>
   <div id="game"></div>
+  <canvas id="confettiCanvas"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script>
-    let currentPlayers = 2;
+	let currentPlayers = 2;
     let playerNames = [];
+    let dropMarks = {};
 
-    function restartGame() {
+    function startGame() {
+      localStorage.removeItem("molkkydatastore"); // Tyhjennetään vanha peli
       const newCount = parseInt(document.getElementById("playerCount").value);
+      playerNames = Array.from({ length: newCount }, (_, i) => `Pelaaja ${i + 1}`);
       currentPlayers = newCount;
-      playerNames = [...Array(currentPlayers)].map((_, i) => `Pelaaja_${i + 1}`);
+      dropMarks = {};
       initializeTable();
     }
 
-    function initializeTable() {
-      const container = document.getElementById("game");
-      container.innerHTML = `
-        <div style="text-align:center;">
-          <strong>Pelatut kierrokset: <span id="roundCounter">0</span></strong>
-        </div>
-        <table id="scoreTable">
-          <thead>
-            <tr><th>Kierros</th>${playerNames.map((name, i) =>
-              `<th><input type="text" id="name${i}" value="${name}" onchange="updateNames()" /></th>`).join("")}
-            </tr>
-          </thead>
-          <tbody id="scoreBody"></tbody>
-          <tfoot>
-            <tr><td>Yhteensä</td>${playerNames.map((_, i) =>
-              `<td id="sum${i}">0</td>`).join("")}
-            </tr>
-          </tfoot>
-        </table>`;
-      addRound();
-    }
+    function initializeTable(skipInitialRound = false) {
+	  document.getElementById("game").innerHTML = `
+		<div id="banners"></div>
+		<div style="text-align:center;">
+		  <strong>Pelatut kierrokset: <span id="roundCounter">0</span></strong>
+		</div>
+		<table id="scoreTable">
+		  <thead>
+			<tr>
+			  <th>Kierros</th>
+			  ${playerNames.map((name, i) =>
+				`<th><input type="text" id="name${i}" value="${name}" onchange="updateNames()" /></th>`
+			  ).join("")}
+			</tr>
+		  </thead>
+		  <tbody id="scoreBody"></tbody>
+		  <tfoot>
+			<tr>
+			  <td>Yhteensä</td>
+			  ${playerNames.map((_, i) => `<td id="sum${i}">0</td>`).join("")}
+			</tr>
+		  </tfoot>
+		</table>`;
+
+	  if (!skipInitialRound && !loadFromStorage()) {
+		addRound();
+	  }
+	}
+
 
     function updateNames() {
       for (let i = 0; i < currentPlayers; i++) {
         const input = document.getElementById("name" + i);
-        playerNames[i] = input.value;
+        if (input) {
+          playerNames[i] = input.value;
+        }
       }
+      saveToStorage();
     }
 
     function addRound() {
-      const table = document.getElementById("scoreBody");
-      const roundNumber = table.children.length + 1;
+      const tbody = document.getElementById("scoreBody");
+      const round = tbody.children.length;
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${roundNumber}</td>` + playerNames.map(() =>
-        `<td><input type="number" min="0" max="12" oninput="updateSums()" /></td>`).join("");
-      table.appendChild(tr);
-      document.getElementById("roundCounter").textContent = roundNumber;
+      tr.innerHTML = `<td>${round + 1}</td>` +
+        playerNames.map(() =>
+          `<td><input type="number" min="0" max="12" onchange="updateSums()" /></td>`
+        ).join("");
+      tbody.appendChild(tr);
+      document.getElementById("roundCounter").textContent = round + 1;
     }
 
-    function updateSums() {
-      const rows = document.querySelectorAll("#scoreBody tr");
-      let totals = Array(currentPlayers).fill(0);
-      let someoneWon = false;
+	function updateSums() {
+	  const rows = document.querySelectorAll("#scoreBody tr");
+	  let totals = Array(currentPlayers).fill(0);
+	  let winners = [];
+	  document.getElementById("banners").innerHTML = "";
 
-      rows.forEach(row => {
-        row.querySelectorAll("td").forEach(td => td.classList.remove("overlimit"));
+	  // Poista aiemmat yli 50 -taustavärit ja aseta ne uudestaan dropMarks perusteella
+	  rows.forEach((row, r) => {
+		row.querySelectorAll("input").forEach((input, p) => {
+		  const key = `${r}-${p}`;
+		  if (dropMarks[key]) {
+			input.classList.add("overlimit");
+		  } else {
+			input.classList.remove("overlimit");
+		  }
+		});
+	  });
+
+	  // Laske summat ja käsittele yli 50 tilanteet
+	  for (let p = 0; p < currentPlayers; p++) {
+		let total = 0;
+		for (let r = 0; r < rows.length; r++) {
+		  const input = rows[r].querySelectorAll("input")[p];
+		  let val = parseInt(input.value);
+		  if (!isNaN(val)) {
+			total += val;
+			if (total > 50) {
+			  const name = document.getElementById("name" + p).value || `Pelaaja ${p + 1}`;
+			  const doDrop = confirm(`${name} ylitti 50 pistettä kierroksella ${r + 1}. Pudotetaanko pistemäärä 25:een?`);
+			  if (doDrop) {
+				for (let i = 0; i <= r; i++) {
+				  const inp = rows[i].querySelectorAll("input")[p];
+				  inp.value = '';
+				  dropMarks[`${i}-${p}`] = true;
+				  inp.classList.add("overlimit");
+				}
+
+				const droppedInput = rows[r].querySelectorAll("input")[p];
+				droppedInput.value = 25;
+				dropMarks[`${r}-${p}`] = true;
+				droppedInput.classList.add("overlimit");
+				total = 25;
+			  }
+			  break;
+			}
+		  }
+		}
+
+		totals[p] = total;
+		const cell = document.getElementById("sum" + p);
+		cell.textContent = total;
+		cell.classList.remove("winner");
+	  }
+
+	  // Tarkista onko viimeinen kierros täytetty
+	  const lastInputs = rows[rows.length - 1]?.querySelectorAll("input") || [];
+	  const allValid = [...lastInputs].every(i => i.value !== "" && !isNaN(parseInt(i.value)));
+
+	  // Jos kierros on täynnä, tarkista voittajat
+	  if (allValid) {
+		for (let p = 0; p < currentPlayers; p++) {
+		  if (totals[p] === 50) {
+			winners.push(p);
+		  }
+		}
+
+		if (winners.length > 0) {
+		  const banner = document.getElementById("banners");
+		  winners.forEach(p => {
+			const name = document.getElementById("name" + p).value || `Pelaaja ${p + 1}`;
+			banner.innerHTML += `<div class="banner">🎉 Voittaja: ${name} 🎉</div>`;
+			document.getElementById("sum" + p).classList.add("winner");
+		  });
+		  triggerConfetti();
+		  saveToStorage();
+		  return; // Ei lisätä uutta kierrosta jos peli päättyi
+		}
+
+		// Jos ei voittajaa, lisää uusi kierros
+		addRound();
+		setTimeout(() => {
+		  const last = document.querySelector("#scoreBody tr:last-child");
+		  if (last) last.querySelector("input")?.focus();
+		}, 50);
+	  }
+
+	  saveToStorage();
+	}
+
+
+    function triggerConfetti() {
+      const duration = 2000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+    }
+
+    function saveToStorage() {
+      const data = {
+        playerCount: currentPlayers,
+        playerNames,
+        dropMarks,
+        scores: [],
+      };
+      document.querySelectorAll("#scoreBody tr").forEach(row => {
+        const inputs = row.querySelectorAll("input");
+        const rowData = [...inputs].map(inp => inp.value);
+        data.scores.push(rowData);
       });
+      localStorage.setItem("molkkydatastore", JSON.stringify(data));
+    }
 
-      for (let p = 0; p < currentPlayers; p++) {
-        let total = 0;
-        for (let r = 0; r < rows.length; r++) {
-          const input = rows[r].querySelectorAll("input")[p];
-          let val = parseInt(input.value);
-          if (!isNaN(val)) {
-            total += val;
-            if (total > 50) {
-              alert(`Pelaaja ${p + 1} ylitti 50 pistettä kierroksella ${r + 1}. Pistemäärä pudotetaan 25:een.`);
-              for (let i = 0; i <= r; i++) {
-                rows[i].querySelectorAll("input")[p].value = '';
-              }
-              rows[r].querySelectorAll("input")[p].value = 25;
-              rows[r].querySelectorAll("td")[p + 1].classList.add("overlimit");
-              total = 25;
-              break;
-            }
-          }
-        }
-        totals[p] = total;
-        const cell = document.getElementById("sum" + p);
-        cell.textContent = total;
-        cell.classList.remove("winner");
-        if (total === 50) {
-          cell.classList.add("winner");
-          someoneWon = true;
-        }
+    function loadFromStorage() {
+      const stored = localStorage.getItem("molkkydatastore");
+      if (!stored) return false;
+      try {
+        const data = JSON.parse(stored);
+        currentPlayers = data.playerCount;
+        playerNames = data.playerNames || [];
+        dropMarks = data.dropMarks || {};
+        document.getElementById("playerCount").value = currentPlayers;
+        initializeTableFromData(data);
+        return true;
+      } catch (e) {
+        console.error("Virhe ladattaessa peliä:", e);
+        return false;
       }
+    }
 
-      const lastInputs = rows[rows.length - 1]?.querySelectorAll("input") || [];
-      const allFilled = [...lastInputs].every(input => input.value !== "");
-      if (!someoneWon && allFilled) {
-        addRound();
-      }
+    function initializeTableFromData(data) {
+      const tbody = document.getElementById("scoreBody");
+      data.scores.forEach((rowData, r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${r + 1}</td>` + rowData.map((val, p) => {
+          const over = dropMarks[`${r}-${p}`] ? " class='overlimit'" : "";
+          return `<td${over}><input type="number" min="0" max="12" value="${val}" onchange="updateSums()" /></td>`;
+        }).join("");
+        tbody.appendChild(tr);
+      });
+      playerNames.forEach((n, i) => {
+        const input = document.getElementById("name" + i);
+        if (input) input.value = n;
+      });
+      document.getElementById("roundCounter").textContent = data.scores.length;
+      updateSums();
     }
 
     window.onload = () => {
-      restartGame();
-      document.getElementById("playerCount").addEventListener("change", restartGame);
-    };
+	  const stored = localStorage.getItem("molkkydatastore");
+	  if (stored) {
+		const data = JSON.parse(stored);
+		currentPlayers = data.playerCount;
+		playerNames = data.playerNames || Array.from({ length: currentPlayers }, (_, i) => `Pelaaja ${i + 1}`);
+		dropMarks = data.dropMarks || {};
+		initializeTable(true); // Luo taulun mutta EI lisää kierrosta
+		initializeTableFromData(data); // Täyttää tiedot
+	  } else {
+		startGame();
+	  }
+	  document.getElementById("playerCount").addEventListener("change", startGame);
+	};
+
+	
   </script>
 </body>
 </html>
