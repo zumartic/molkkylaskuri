@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mölkky Pisteiden Laskuri</title>
+  <title>Mölkky Pistelaskuri</title>
+  <link rel='stylesheet prefetch' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css'>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; background: #f9f9f9; }
     h1 { text-align: center; font-size: 1.6em; }
@@ -45,10 +46,130 @@
 	input.overlimit {
 		background-color: #ffcccc !important;
 	}
+	.sum-row td {
+		font-weight: bold;
+	}
+	.name-row input {
+		font-size: 1.1em;
+		font-weight: 500;
+		text-align: center;
+	}
+	
+	#contact{
+		margin-top: 0px;
+		padding-top: 30px;
+		color: #555555;
+	}
+	
+	
+	#contact{
+		margin-top: 0px;
+		padding-top: 30px;
+		color: #555555;
+	}
+	
+    #contact h2 {
+	  position: relative;
+	  text-align: center;
+	  margin: 10px 0;
+	}
+
+	#contact p {
+	  text-align: center;
+	}
+
+	#contact h2::before,
+	#contact h2::after {
+	  content: "";
+	  display: block;
+	  height: 1px;
+	  background-color: #aaa;
+	  margin: 5px auto;
+	  width: 70%;
+	}
+	
+	.social {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 0;
+        margin: 0;
+    }
+
+
+    .social i {
+        color: #555555;
+        margin-bottom: 2px;
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #555555;
+        border-radius: 50%;
+		-moz-border-radius: 50%;
+		-webkit-border-radius: 50%;
+		-o-border-radius: 50%;
+	}
+
+	.social a {
+ 	   text-decoration: none;
+	}
+
+	.fa:hover{
+	  -webkit-transform: scale(1.3);
+	  -ms-transform: scale(1.3);
+	  transform: scale(1.3);
+	  /*background-color: #ffff99;*/
+	}
+
+	.fa-linkedin:hover{
+	  color: white;
+	  background: #0077b5;
+	}
+
+	.fa-github:hover{
+	  color: white;
+	  background: black;
+	}
+
+	.fa-codepen:hover{
+	  color: white;
+	  background: black;
+	}
+
+	.fa-instagram:hover{
+	  color: white;
+	  background: #5851db;
+	}
+
+	.fa-fire:hover{
+	  color: white;
+	  background: green;
+	}
+
+	footer{
+	  margin-top: 10px;
+	  margin-bottom: 20px;
+	  text-align:center;
+	}
+
+	footer .fa:hover{
+	  -webkit-transform: scale(1.0);
+	  -ms-transform: scale(1.0);
+	  transform: scale(1.0);
+	  color: red;
+	}
+	
+	footer > a {
+		color: #555555;
+	}
+	
   </style>
 </head>
 <body>
-  <h1>Mölkky Pisteiden Laskuri</h1>
+  <h1>Mölkky Pistelaskuri</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -80,33 +201,43 @@
 
     function initializeTable(skipInitialRound = false) {
 	  document.getElementById("game").innerHTML = `
-		<div id="banners"></div>
-		<div style="text-align:center;">
-		  <strong>Pelatut kierrokset: <span id="roundCounter">0</span></strong>
-		</div>
+		<style>
+		  .sum-row td {
+			font-weight: bold;
+		  }
+		  .name-row input {
+			font-size: 1.1em;
+			font-weight: 500;
+			text-align: center;
+		  }
+		</style>
+
 		<table id="scoreTable">
-		  <thead>
-			<tr>
-			  <th>Kierros</th>
-			  ${playerNames.map((name, i) =>
-				`<th><input type="text" id="name${i}" value="${name}" onchange="updateNames()" /></th>`
-			  ).join("")}
-			</tr>
-		  </thead>
 		  <tbody id="scoreBody"></tbody>
-		  <tfoot>
-			<tr>
+		  <tbody>
+			<tr class="sum-row">
 			  <td>Yhteensä</td>
 			  ${playerNames.map((_, i) => `<td id="sum${i}">0</td>`).join("")}
 			</tr>
-		  </tfoot>
-		</table>`;
+			<tr class="name-row">
+			  <td>Pelaajat</td>
+			  ${playerNames.map((name, i) =>
+				`<td><input type="text" id="name${i}" value="${name}" onchange="updateNames()" /></td>`
+			  ).join("")}
+			</tr>
+		  </tbody>
+		</table>
+
+		<div style="text-align:center;">
+		  <strong>Pelatut kierrokset: <span id="roundCounter">0</span></strong>
+		</div>
+		<div id="banners"></div>
+	  `;
 
 	  if (!skipInitialRound && !loadFromStorage()) {
 		addRound();
 	  }
 	}
-
 
     function updateNames() {
       for (let i = 0; i < currentPlayers; i++) {
@@ -128,6 +259,11 @@
         ).join("");
       tbody.appendChild(tr);
       document.getElementById("roundCounter").textContent = round + 1;
+	  // Smooth scroll koko sivulla alas
+	  window.scroll({
+		top: document.body.scrollHeight,
+		behavior: "smooth"
+	  });
     }
 
 	function updateSums() {
@@ -136,19 +272,20 @@
 	  let winners = [];
 	  document.getElementById("banners").innerHTML = "";
 
-	  // Poista aiemmat yli 50 -taustavärit ja aseta ne uudestaan dropMarks perusteella
+	  // Nollaa kaikki punaiset taustat
 	  rows.forEach((row, r) => {
-		row.querySelectorAll("input").forEach((input, p) => {
-		  const key = `${r}-${p}`;
-		  if (dropMarks[key]) {
-			input.classList.add("overlimit");
-		  } else {
-			input.classList.remove("overlimit");
-		  }
+		  row.querySelectorAll("input").forEach((input, p) => {
+			const key = `${r}-${p}`;
+			if (dropMarks[key]) {
+			  input.classList.add("overlimit"); // Merkitse uudelleen tarvittaessa
+			} else {
+			  input.classList.remove("overlimit"); // Varmista että muissa ei ole väriä
+			}
+		  });
 		});
-	  });
 
-	  // Laske summat ja käsittele yli 50 tilanteet
+
+	  // Laske summat ja käsittele yli 50 -tapaukset
 	  for (let p = 0; p < currentPlayers; p++) {
 		let total = 0;
 		for (let r = 0; r < rows.length; r++) {
@@ -160,17 +297,17 @@
 			  const name = document.getElementById("name" + p).value || `Pelaaja ${p + 1}`;
 			  const doDrop = confirm(`${name} ylitti 50 pistettä kierroksella ${r + 1}. Pudotetaanko pistemäärä 25:een?`);
 			  if (doDrop) {
-				for (let i = 0; i <= r; i++) {
+				// Tyhjennä edelliset kentät
+				for (let i = 0; i < r; i++) {
 				  const inp = rows[i].querySelectorAll("input")[p];
 				  inp.value = '';
-				  dropMarks[`${i}-${p}`] = true;
-				  inp.classList.add("overlimit");
 				}
 
+				// Aseta pisteet 25:een ja merkitse punaiseksi vain tämä kenttä
 				const droppedInput = rows[r].querySelectorAll("input")[p];
 				droppedInput.value = 25;
-				dropMarks[`${r}-${p}`] = true;
 				droppedInput.classList.add("overlimit");
+				dropMarks[`${r}-${p}`] = true;
 				total = 25;
 			  }
 			  break;
@@ -205,6 +342,11 @@
 		  });
 		  triggerConfetti();
 		  saveToStorage();
+		  // Smooth scroll koko sivulla alas
+		  window.scroll({
+			top: document.body.scrollHeight,
+			behavior: "smooth"
+		  });
 		  return; // Ei lisätä uutta kierrosta jos peli päättyi
 		}
 
@@ -218,7 +360,6 @@
 
 	  saveToStorage();
 	}
-
 
     function triggerConfetti() {
       const duration = 2000;
@@ -294,8 +435,20 @@
 	  }
 	  document.getElementById("playerCount").addEventListener("change", startGame);
 	};
-
 	
   </script>
+  <!-- Contacts -->
+  <div id="contact">
+    <h2>Contact</h2>
+	<p>In professional matters you can contact me via Linkedin profile.</p>
+	<div class="social">
+	  <a href="https://fi.linkedin.com/in/sami-kangas" target="_blank"><i class="fa fa-lg fa-linkedin"></i></a>
+	  <a href="https://github.com/zumartic" target="_blank"><i class="fa fa-lg fa-github"></i></a>
+	  <a href="https://www.freecodecamp.com/zumartic" target="_blank"><i class="fa fa-lg fa-fire"></i></a>
+	  <a href="https://codepen.io/zumartic/#" target="_blank"><i class="fa fa-lg fa-codepen"></i></a>
+	  <a href="https://www.instagram.com/zumartic/" target="_blank"><i class="fa fa-lg fa-instagram"></i></a>
+	</div>
+    <footer>Site developed by Sami Kangas 2025 with <a href="https://open.spotify.com/track/3eqUnzUEyAtznlqapc4fSg?si=610f285979174a97" target="_blank"><i class="fa fa-lg fa-music"></i></a> and <i class="fa fa-lg fa-heart"></i></footer>
+  </div> 
 </body>
 </html>
