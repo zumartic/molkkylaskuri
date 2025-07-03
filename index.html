@@ -334,23 +334,31 @@
 		}
 
 		if (winners.length > 0) {
-		  const banner = document.getElementById("banners");
-		  winners.forEach(p => {
-			const name = document.getElementById("name" + p).value || `Pelaaja ${p + 1}`;
-			banner.innerHTML += `<div class="banner">🎉 Voittaja: ${name} 🎉</div>`;
-			document.getElementById("sum" + p).classList.add("winner");
-		  });
+			const banner = document.getElementById("banners");
+			winners.forEach(p => {
+				const name = document.getElementById("name" + p).value || `Pelaaja ${p + 1}`;
+				banner.innerHTML += `<div class="banner">🎉 Voittaja: ${name} 🎉</div>`;
+				document.getElementById("sum" + p).classList.add("winner");
+			});
 
-		  triggerConfetti();
-		  saveToStorage();
-		  // Smooth scroll koko sivulla alas
-		  window.scroll({
-			top: document.body.scrollHeight,
-			behavior: "smooth"
-		  });
+			// 1. Blur any focused input to hide keyboard
+			const active = document.activeElement;
+			if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+				active.blur();
+			}
 
-		  return; // Ei lisätä uutta kierrosta jos peli päättyi
+			// 2. Scroll to bottom to support mobile keyboard dismissal
+			window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+
+			// 3. Delay confetti to let keyboard close
+			setTimeout(() => {
+				triggerConfetti();
+				saveToStorage();
+			}, 300); // 300ms gives mobile time to hide keyboard
+
+			return; // Ei lisätä uutta kierrosta jos peli päättyi
 		}
+
 
 		// Jos ei voittajaa, lisää uusi kierros
 		addRound();
