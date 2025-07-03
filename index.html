@@ -340,6 +340,13 @@
 			banner.innerHTML += `<div class="banner">🎉 Voittaja: ${name} 🎉</div>`;
 			document.getElementById("sum" + p).classList.add("winner");
 		  });
+
+		  // Fokus pois input-kentästä
+  		  const active = document.activeElement;
+  		  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+             		active.blur();
+  		  }
+
 		  triggerConfetti();
 		  saveToStorage();
 		  // Smooth scroll koko sivulla alas
@@ -449,6 +456,7 @@
 	  <a href="https://www.instagram.com/zumartic/" target="_blank"><i class="fa fa-lg fa-instagram"></i></a>
 	</div>
     <footer>Site developed by Sami Kangas 2025 with <a href="https://open.spotify.com/track/3eqUnzUEyAtznlqapc4fSg?si=610f285979174a97" target="_blank"><i class="fa fa-lg fa-music"></i></a> and <i class="fa fa-lg fa-heart"></i></footer>
-  </div> 
+  </div>
+    
 </body>
 </html>
