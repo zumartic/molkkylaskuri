@@ -169,7 +169,7 @@
   </style>
 </head>
 <body>
-  <h1>Mölkky Pistelaskuri 2</h1>
+  <h1>Mölkky Pistelaskuri</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -341,24 +341,13 @@
 			document.getElementById("sum" + p).classList.add("winner");
 		  });
 
-		  // Fokus pois input-kentästä
-  		  const active = document.activeElement;
-  		  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
- 	       		active.blur();
-  		  }
-
-		  // Wait a bit to let keyboard close before confetti and scroll
-		  setTimeout(() => {
-		   	triggerConfetti();
-			saveToStorage();
-
-			// Smooth scroll koko sivulla alas
-			window.scroll({
-				top: document.body.scrollHeight,
-				behavior: "smooth"
-				});
-		   }, 100); // 100ms is usually enough			
-
+		  triggerConfetti();
+		  saveToStorage();
+		  // Smooth scroll koko sivulla alas
+		  window.scroll({
+			top: document.body.scrollHeight,
+			behavior: "smooth"
+		  });
 
 		  return; // Ei lisätä uutta kierrosta jos peli päättyi
 		}
