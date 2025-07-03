@@ -169,7 +169,7 @@
   </style>
 </head>
 <body>
-  <h1>Mölkky Pistelaskuri</h1>
+  <h1>Mölkky Pistelaskuri 2</h1>
   <div id="playerCountContainer">
     Pelaajien määrä:
     <select id="playerCount">
@@ -344,16 +344,22 @@
 		  // Fokus pois input-kentästä
   		  const active = document.activeElement;
   		  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
-             		active.blur();
+ 	       		active.blur();
   		  }
 
-		  triggerConfetti();
-		  saveToStorage();
-		  // Smooth scroll koko sivulla alas
-		  window.scroll({
-			top: document.body.scrollHeight,
-			behavior: "smooth"
-		  });
+		  // Wait a bit to let keyboard close before confetti and scroll
+		  setTimeout(() => {
+		   	triggerConfetti();
+			saveToStorage();
+
+			// Smooth scroll koko sivulla alas
+			window.scroll({
+				top: document.body.scrollHeight,
+				behavior: "smooth"
+				});
+		   }, 100); // 100ms is usually enough			
+
+
 		  return; // Ei lisätä uutta kierrosta jos peli päättyi
 		}
 
@@ -442,6 +448,7 @@
 	  }
 	  document.getElementById("playerCount").addEventListener("change", startGame);
 	};
+
 	
   </script>
   <!-- Contacts -->
@@ -457,6 +464,7 @@
 	</div>
     <footer>Site developed by Sami Kangas 2025 with <a href="https://open.spotify.com/track/3eqUnzUEyAtznlqapc4fSg?si=610f285979174a97" target="_blank"><i class="fa fa-lg fa-music"></i></a> and <i class="fa fa-lg fa-heart"></i></footer>
   </div>
-    
+  
+  
 </body>
 </html>
